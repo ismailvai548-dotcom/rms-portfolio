@@ -21,20 +21,31 @@ const App = () => {
   }, []);
 
   const skills = [
-    "Banner Design",
-    "Logo Design",
-    "Poster Design",
-    "Facebook Cover Design",
-    "YouTube Thumbnail",
-    "App UI Design",
-    "Website UI Design",
-    "Portfolio Design",
-    "AI Image Prompt",
-    "AI Video Prompt",
-    "Telegram Bot",
-    "React Frontend",
-    "Automation Tools",
-    "Brand Identity",
+    "Banner Design", "Logo Design", "Poster Design", "Facebook Cover Design",
+    "YouTube Thumbnail", "App UI Design", "Website UI Design", "Portfolio Design",
+    "AI Image Prompt", "AI Video Prompt", "Telegram Bot", "React Frontend",
+    "Automation Tools", "Brand Identity",
+  ];
+
+  const socialLinks = [
+    {
+      name: "Facebook",
+      url: "https://www.facebook.com/profile.php?id=61562833449395",
+      color: "hover:bg-blue-600",
+      icon: <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v2.385z"/></svg>
+    },
+    {
+      name: "Telegram",
+      url: "https://t.me/rm_rasel_hossain",
+      color: "hover:bg-sky-500",
+      icon: <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm4.467 8.246l-1.98 9.33c-.145.647-.532.807-1.077.502l-3.022-2.227-1.458 1.403c-.161.161-.297.297-.61.297l.217-3.084 5.612-5.07c.244-.217-.054-.337-.377-.122l-6.936 4.368-2.988-.934c-.65-.203-.663-.65.136-.962l11.684-4.502c.542-.196 1.015.127.839.999z"/></svg>
+    },
+    {
+      name: "WhatsApp",
+      url: "https://wa.me/8801933243074",
+      color: "hover:bg-emerald-500",
+      icon: <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.319 1.592 5.548 0 10.061-4.512 10.063-10.062 0-2.69-1.048-5.216-2.951-7.121s-4.439-2.951-7.128-2.951c-5.55 0-10.061 4.513-10.064 10.063-.001 2.032.547 3.513 1.541 5.143l-1.019 3.722 3.84-.986zm11.367-7.584c-.31-.155-1.837-.906-2.115-1.006-.279-.1-.482-.149-.683.155-.201.304-.777 1.006-.953 1.207-.176.201-.351.226-.662.071-1.144-.572-1.923-.913-2.686-2.219-.201-.344.201-.319.577-1.071.075-.155.038-.291-.019-.396-.057-.106-.482-1.161-.662-1.595-.175-.424-.351-.366-.483-.372h-.411c-.142 0-.372.053-.566.265-.194.212-.741.724-.741 1.765s.757 2.047.863 2.19c.106.142 1.489 2.273 3.606 3.185.504.217.897.347 1.206.445.506.161.966.138 1.33.084.406-.06 1.837-.751 2.096-1.477.259-.725.259-1.347.182-1.477-.077-.13-.284-.207-.594-.362z"/></svg>
+    }
   ];
 
   const workCategories = [
@@ -49,7 +60,7 @@ const App = () => {
     if (type === "logo") {
       return (
         <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-blue-500 via-cyan-400 to-emerald-400 flex items-center justify-center shadow-[0_0_45px_rgba(59,130,246,0.45)] rotate-[-8deg] group-hover:rotate-0 group-hover:scale-110 transition-all duration-500">
-          <span className="text-4xl font-black text-white tracking-tighter">RMS</span>
+          <span className="text-4xl font-black text-white tracking-tighter">RM</span>
         </div>
       );
     }
@@ -119,7 +130,7 @@ const App = () => {
       <nav className="fixed w-full bg-slate-950/80 backdrop-blur-md z-50 border-b border-slate-800/50 px-6">
         <div className="max-w-6xl mx-auto py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent tracking-tighter">
-            RMS RASEL
+            RM RASEL HOSSAIN
           </h1>
           <div className="flex gap-6 text-sm font-medium text-slate-400">
             <a href="#work" className="hover:text-blue-400 transition-colors">Works</a>
@@ -191,9 +202,6 @@ const App = () => {
             <h3 className="text-3xl md:text-5xl font-black tracking-tight">
               Work Categories
             </h3>
-            <p className="text-slate-500 mt-4 max-w-2xl mx-auto">
-              আলাদা আলাদা ক্যাটাগরিতে ডিজাইনগুলো সাজানো থাকবে, যাতে ক্লায়েন্ট সহজে কাজ দেখতে পারে।
-            </p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -235,113 +243,57 @@ const App = () => {
               Send Your Message
             </h3>
 
-            <p className="text-slate-500 mb-8">
-              আপনার নাম, ইমেইল এবং মেসেজ লিখে পাঠিয়ে দিন। মেসেজ আমার ইমেইলে চলে আসবে।
-            </p>
-
-            <form
-              action="https://formspree.io/f/mwvykpvl"
-              method="POST"
-              className="space-y-4 text-left"
-            >
-              <input
-                type="text"
-                name="name"
-                placeholder="Your Name"
-                required
-                className="w-full px-5 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-all"
-              />
-
-              <input
-                type="email"
-                name="email"
-                placeholder="Your Email"
-                required
-                className="w-full px-5 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-all"
-              />
-
-              <textarea
-                name="message"
-                placeholder="Your Message"
-                required
-                rows="5"
-                className="w-full px-5 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-all resize-none"
-              ></textarea>
-
-              <button
-                type="submit"
-                className="w-full py-4 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black transition-all hover:scale-[1.02]"
-              >
+            <form action="https://formspree.io/f/mwvykpvl" method="POST" className="space-y-4 text-left">
+              <input type="text" name="name" placeholder="Your Name" required className="w-full px-5 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-all" />
+              <input type="email" name="email" placeholder="Your Email" required className="w-full px-5 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-all" />
+              <textarea name="message" placeholder="Your Message" required rows="5" className="w-full px-5 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 outline-none focus:border-blue-500 transition-all resize-none"></textarea>
+              <button type="submit" className="w-full py-4 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black transition-all hover:scale-[1.02]">
                 Send Message
               </button>
             </form>
+
+            <div className="mt-12 pt-10 border-t border-slate-800/50">
+              <div className="flex justify-center gap-4">
+                {socialLinks.map((social, idx) => (
+                  <a
+                    key={idx}
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 transition-all duration-300 transform hover:-translate-y-1 hover:text-white ${social.color}`}
+                  >
+                    {social.icon}
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <footer className="py-12 border-t border-slate-900 text-center text-slate-600 text-xs tracking-widest uppercase">
-        © 2026 RMS RASEL • Graphic Design Portfolio
+        © 2026 RM RASEL HOSSAIN • Graphic Design Portfolio
       </footer>
 
       <style>{`
-        .welcome-box {
-          animation: welcomeMotion 2.2s ease forwards;
-        }
-
+        .welcome-box { animation: welcomeMotion 2.2s ease forwards; }
         @keyframes welcomeMotion {
-          0% {
-            transform: translateY(90px) scale(.75);
-            opacity: 0;
-            filter: blur(14px);
-          }
-          45% {
-            transform: translateY(0) scale(1.08);
-            opacity: 1;
-            filter: blur(0);
-          }
-          68% {
-            transform: translateY(-12px) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(40px) scale(.92);
-            opacity: 0;
-            filter: blur(12px);
-          }
+          0% { transform: translateY(90px) scale(.75); opacity: 0; filter: blur(14px); }
+          45% { transform: translateY(0) scale(1.08); opacity: 1; filter: blur(0); }
+          68% { transform: translateY(-12px) scale(1); opacity: 1; }
+          100% { transform: translateY(40px) scale(.92); opacity: 0; filter: blur(12px); }
         }
-
         .hero-sweep {
-          position: absolute;
-          inset: -40%;
-          z-index: 5;
-          background: linear-gradient(
-            115deg,
-            transparent 35%,
-            rgba(255,255,255,0.04) 44%,
-            rgba(96,165,250,0.35) 50%,
-            rgba(34,197,94,0.16) 54%,
-            transparent 64%
-          );
-          transform: translateX(-85%) rotate(8deg);
-          animation: heroSweep 1.45s ease forwards;
-          pointer-events: none;
-          mix-blend-mode: screen;
+          position: absolute; inset: -40%; z-index: 5;
+          background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.04) 44%, rgba(96,165,250,0.35) 50%, rgba(34,197,94,0.16) 54%, transparent 64%);
+          transform: translateX(-85%) rotate(8deg); animation: heroSweep 1.45s ease forwards;
+          pointer-events: none; mix-blend-mode: screen;
         }
-
         @keyframes heroSweep {
-          0% {
-            transform: translateX(-90%) rotate(8deg);
-            opacity: 0;
-          }
-          18% {
-            opacity: 1;
-          }
-          100% {
-            transform: translateX(90%) rotate(8deg);
-            opacity: 0;
-          }
+          0% { transform: translateX(-90%) rotate(8deg); opacity: 0; }
+          18% { opacity: 1; }
+          100% { transform: translateX(90%) rotate(8deg); opacity: 0; }
         }
-
         @keyframes skillSlide {
           0%, 6% { transform: translateY(0); }
           7%, 13% { transform: translateY(-40px); }
@@ -359,83 +311,31 @@ const App = () => {
           91%, 96% { transform: translateY(-520px); }
           97%, 100% { transform: translateY(0); }
         }
-
-        .skill-slider {
-          animation: skillSlide 25s infinite ease-in-out;
-        }
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
+        .skill-slider { animation: skillSlide 25s infinite ease-in-out; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .particle {
-          position: absolute;
-          bottom: -80px;
-          border-radius: 999px;
+          position: absolute; bottom: -80px; border-radius: 999px;
           background: radial-gradient(circle, rgba(96,165,250,.95), transparent 72%);
-          opacity: .26;
-          box-shadow: 0 0 34px rgba(96,165,250,.5);
-          animation: floatParticle linear infinite;
+          opacity: .26; box-shadow: 0 0 34px rgba(96,165,250,.5); animation: floatParticle linear infinite;
         }
-
-        .particle-one { left: 10%; width: 8px; height: 8px; animation-duration: 13s; animation-delay: 0s; }
+        .particle-one { left: 10%; width: 8px; height: 8px; animation-duration: 13s; }
         .particle-two { left: 22%; width: 5px; height: 5px; animation-duration: 16s; animation-delay: 2s; }
         .particle-three { left: 38%; width: 11px; height: 11px; animation-duration: 18s; animation-delay: 1s; }
         .particle-four { left: 51%; width: 6px; height: 6px; animation-duration: 14s; animation-delay: 4s; }
         .particle-five { left: 68%; width: 9px; height: 9px; animation-duration: 17s; animation-delay: 3s; }
         .particle-six { left: 82%; width: 7px; height: 7px; animation-duration: 15s; animation-delay: 5s; }
-        .particle-seven { left: 92%; width: 12px; height: 12px; animation-duration: 20s; animation-delay: 2.5s; }
+        .particle-seven { left: 92%; width: 12px; height: 12px; animation-duration: 20s; }
         .particle-eight { left: 45%; width: 4px; height: 4px; animation-duration: 12s; animation-delay: 6s; }
-
         @keyframes floatParticle {
-          0% {
-            transform: translateY(0) translateX(0) scale(.5);
-            opacity: 0;
-          }
-          18% {
-            opacity: .34;
-          }
-          50% {
-            transform: translateY(-55vh) translateX(28px) scale(1);
-          }
-          100% {
-            transform: translateY(-125vh) translateX(-24px) scale(1.35);
-            opacity: 0;
-          }
+          0% { transform: translateY(0) translateX(0) scale(.5); opacity: 0; }
+          18% { opacity: .34; }
+          50% { transform: translateY(-55vh) translateX(28px) scale(1); }
+          100% { transform: translateY(-125vh) translateX(-24px) scale(1.35); opacity: 0; }
         }
-
-        .orb {
-          position: absolute;
-          width: 260px;
-          height: 260px;
-          border-radius: 999px;
-          filter: blur(70px);
-          opacity: .12;
-          animation: driftOrb 18s ease-in-out infinite alternate;
-        }
-
-        .orb-one {
-          left: 14%;
-          top: 20%;
-          background: #2563eb;
-        }
-
-        .orb-two {
-          right: 10%;
-          top: 32%;
-          background: #22c55e;
-          animation-delay: 4s;
-        }
-
-        @keyframes driftOrb {
-          from {
-            transform: translateY(20px) translateX(-20px) scale(.9);
-          }
-          to {
-            transform: translateY(-30px) translateX(30px) scale(1.08);
-          }
-        }
+        .orb { position: absolute; width: 260px; height: 260px; border-radius: 999px; filter: blur(70px); opacity: .12; animation: driftOrb 18s ease-in-out infinite alternate; }
+        .orb-one { left: 14%; top: 20%; background: #2563eb; }
+        .orb-two { right: 10%; top: 32%; background: #22c55e; animation-delay: 4s; }
+        @keyframes driftOrb { from { transform: translateY(20px) translateX(-20px) scale(.9); } to { transform: translateY(-30px) translateX(30px) scale(1.08); } }
       `}</style>
     </div>
   );
