@@ -166,11 +166,11 @@ const App = () => {
     }
   };
 
-  // GOOGLE DRIVE & YOUTUBE UNIVERSAL CONVERTER
+  // CLEAN GOOGLE DRIVE & YOUTUBE EMBED URL
   const getEmbedUrl = (url) => {
     if (!url) return "";
 
-    // 1. Google Drive Link Fix
+    // Google Drive Clean Embed
     if (url.includes("drive.google.com")) {
       let fileId = "";
       const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -183,7 +183,7 @@ const App = () => {
       return fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url;
     }
 
-    // 2. YouTube Link Fix
+    // YouTube Clean Embed
     if (url.includes("youtu.be/") || url.includes("youtube.com")) {
       let videoId = "";
       if (url.includes("youtu.be/")) {
@@ -192,7 +192,7 @@ const App = () => {
         const urlParams = new URLSearchParams(url.split("?")[1]);
         videoId = urlParams.get("v");
       }
-      return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` : url;
+      return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1` : url;
     }
 
     return url;
@@ -249,25 +249,26 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* PERFECT UNIVERSAL POPUP PLAYER FOR MOBILE & DESKTOP */}
+      {/* FULLY RESPONSIVE 16:9 ACCURATE POPUP MODAL */}
       {selectedVideoUrl && (
-        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6">
-          <div className="relative w-full max-w-5xl bg-black rounded-2xl overflow-hidden shadow-2xl my-auto">
-            {/* Close Button */}
+        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+          <div className="relative w-full max-w-4xl bg-black rounded-2xl sm:rounded-3xl border border-slate-800 overflow-hidden shadow-2xl my-auto">
+            
+            {/* Close Button (Top Floating) */}
             <button
               onClick={() => setSelectedVideoUrl(null)}
-              className="absolute top-3 right-3 z-30 w-9 h-9 sm:w-11 sm:h-11 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700/80 font-bold text-sm shadow-xl"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50 w-9 h-9 sm:w-11 sm:h-11 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700 font-bold text-sm shadow-2xl"
               title="Close Video"
             >
               ✕
             </button>
 
-            {/* Responsive Video Container */}
-            <div className="w-full aspect-video bg-black flex items-center justify-center relative">
+            {/* Video Box Container with 16:9 Aspect Ratio Lock */}
+            <div className="w-full relative pt-[56.25%] bg-black overflow-hidden">
               <iframe
                 src={getEmbedUrl(selectedVideoUrl)}
                 title="Video Player"
-                className="w-full h-full border-0 absolute inset-0"
+                className="absolute top-0 left-0 w-full h-full border-0 object-contain"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>
