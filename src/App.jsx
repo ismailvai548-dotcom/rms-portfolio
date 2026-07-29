@@ -114,7 +114,8 @@ const App = () => {
       if (data) setWorks(data);
     } catch (err) {
       console.error("Error fetching works:", err.message);
-    } finally {
+    } font
+    finally {
       setLoading(false);
     }
   };
@@ -377,8 +378,9 @@ const App = () => {
               Get In Touch
             </p>
 
+            {/* 1. NEW CUSTOM HEADER FOR ORDER */}
             <h3 className="text-2xl md:text-3xl font-black mb-6 text-white">
-              Start A Project Together
+              Start Your Project Today — Order Now
             </h3>
 
             <form
@@ -416,7 +418,12 @@ const App = () => {
             </form>
 
             {/* Dynamic Social Media Links Container */}
-            <div className="mt-8 pt-6 border-t border-slate-800/60">
+            <div className="mt-10 pt-6 border-t border-slate-800/60">
+              {/* 2. NEW CUSTOM HEADER FOR INSTANT MESSAGING */}
+              <h4 className="text-base sm:text-lg font-bold text-slate-200 mb-4">
+                Prefer Instant Messaging? Reach Out Here
+              </h4>
+
               <div className="flex justify-center gap-4 flex-wrap">
                 {socialLinks.map((social, idx) => (
                   <a
