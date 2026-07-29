@@ -23,7 +23,9 @@ export default function Admin() {
   const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [desc, setDesc] = useState("");
+  const [position, setPosition] = useState(1);
   const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   // Analytics State
   const [rawViews, setRawViews] = useState([]);
@@ -170,11 +172,14 @@ export default function Admin() {
     });
   };
 
+  // position কলাম অনুযায়ী সাজিয়ে ডাটা ফচ করার ফাংশন
   const fetchWorks = async () => {
     const { data, error } = await supabase
       .from("works")
       .select("*")
+      .order("position", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
+
     if (!error && data) setWorks(data);
   };
 
@@ -198,6 +203,7 @@ export default function Admin() {
     }
   };
 
+  // Work Add / Edit Handler
   const handleAddWork = async (e) => {
     e.preventDefault();
     if (!title || !videoUrl) {
@@ -229,29 +235,83 @@ export default function Admin() {
       }
     }
 
-    const { error } = await supabase.from("works").insert([
-      {
-        title,
-        category,
-        video_url: videoUrl,
-        image_url: finalImageUrl,
-        desc
+    if (editingId) {
+      // UPDATE EXISTING WORK
+      const { error } = await supabase
+        .from("works")
+        .update({
+          title,
+          category,
+          video_url: videoUrl,
+          image_url: finalImageUrl,
+          desc,
+          position: Number(position)
+        })
+        .eq("id", editingId);
+
+      setUploading(false);
+
+      if (error) {
+        setMsg("আপডেট করতে সমস্যা হয়েছে: " + error.message);
+      } else {
+        setMsg("প্রজেক্ট সফলভাবে আপডেট করা হয়েছে! 🎉");
+        resetWorkForm();
+        fetchWorks();
       }
-    ]);
-
-    setUploading(false);
-
-    if (error) {
-      setMsg("ভিডিও আপলোড করতে সমস্যা হয়েছে: " + error.message);
     } else {
-      setMsg("প্রজেক্ট সফলভাবে পোস্ট করা হয়েছে! 🎉");
-      setTitle("");
-      setVideoUrl("");
-      setImageUrl("");
-      setImageFile(null);
-      setDesc("");
-      fetchWorks();
+      // INSERT NEW WORK
+      const { error } = await supabase.from("works").insert([
+        {
+          title,
+          category,
+          video_url: videoUrl,
+          image_url: finalImageUrl,
+          desc,
+          position: Number(position || works.length + 1)
+        }
+      ]);
+
+      setUploading(false);
+
+      if (error) {
+        setMsg("ভিডিও আপলোড করতে সমস্যা হয়েছে: " + error.message);
+      } else {
+        setMsg("প্রজেক্ট সফলভাবে পোস্ট করা হয়েছে! 🎉");
+        resetWorkForm();
+        fetchWorks();
+      }
     }
+  };
+
+  const handleEditWork = (item) => {
+    setEditingId(item.id);
+    setTitle(item.title || "");
+    setCategory(item.category || "Video Editing");
+    setVideoUrl(item.video_url || "");
+    setImageUrl(item.image_url || item.thumbnail_url || "");
+    setDesc(item.desc || "");
+    setPosition(item.position || 1);
+    setActiveTab("add-work"); // Form open for edit
+  };
+
+  const resetWorkForm = () => {
+    setEditingId(null);
+    setTitle("");
+    setVideoUrl("");
+    setImageUrl("");
+    setImageFile(null);
+    setDesc("");
+    setPosition(works.length + 1);
+  };
+
+  // Quick Position Update (সরাসরি নম্বর বদলে পজিশন চেঞ্জ)
+  const handleUpdatePosition = async (id, newPos) => {
+    const { error } = await supabase
+      .from("works")
+      .update({ position: Number(newPos) })
+      .eq("id", id);
+
+    if (!error) fetchWorks();
   };
 
   const handleDeleteWork = async (id) => {
@@ -270,13 +330,13 @@ export default function Admin() {
       ...socials
     });
 
-    if (!error) setMsg("সোশ্যাল লিংকগুলো সফলভাবে আপডেট করা হয়েছে! 🎉");
+    if (!error) setMsg("সোশ্যাল লিংকগুলো সফলভাবে আপডেট করা হয়েছে! 🎉");
   };
 
   const menuItems = [
     { id: "order-tracker", label: "Client Payment Tracker", icon: "💎" },
     { id: "analytics", label: "Live Visitor Analytics", icon: "📊" },
-    { id: "add-work", label: "Add New Work", icon: "📹" },
+    { id: "add-work", label: editingId ? "Edit Work" : "Add New Work", icon: "📹" },
     { id: "existing-works", label: "Portfolio Posts", icon: "📂" },
     { id: "social-links", label: "Social Contacts", icon: "🔗" }
   ];
@@ -379,10 +439,9 @@ export default function Admin() {
           </div>
         )}
 
-        {/* TAB: CLIENT PAYMENT TRACKER (DARK THEME, HORIZONTAL TABLE LAYOUT) */}
+        {/* TAB: CLIENT PAYMENT TRACKER */}
         {activeTab === "order-tracker" && (
           <div className="space-y-8">
-            {/* Input Form Box */}
             <div className="p-6 rounded-2xl bg-[#0d121f] border border-slate-800/80 shadow-xl">
               <div className="flex items-center justify-between pb-4 border-b border-slate-800/60 mb-5">
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -484,7 +543,7 @@ export default function Admin() {
                       onChange={(e) => setPaymentStatus(e.target.value)}
                       className="w-full p-2.5 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-slate-200 outline-none focus:border-blue-500 mt-1 transition-all"
                     >
-                      <option value="Partial Paid">Partial Paid (অর্ধেক দেওয়া)</option>
+                      <option value="Partial Paid">Partial Paid (অর্ধেক দেওয়া)</option>
                       <option value="Fully Paid">Fully Paid (সম্পূর্ণ পরিশোধ)</option>
                       <option value="Pending">Pending (বাকি আছে)</option>
                     </select>
@@ -500,7 +559,7 @@ export default function Admin() {
               </form>
             </div>
 
-            {/* SAVED CLIENT ORDERS - DARK THEME HORIZONTAL TABLE LAYOUT */}
+            {/* SAVED CLIENT ORDERS */}
             <div className="p-6 rounded-2xl bg-[#0d121f] border border-slate-800/80 shadow-xl overflow-hidden">
               <div className="flex items-center justify-between pb-4 border-b border-slate-800/60 mb-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
@@ -511,10 +570,9 @@ export default function Admin() {
 
               {orders.length === 0 ? (
                 <p className="text-slate-500 text-xs italic py-8 text-center">
-                  এখনো কোনো হিসাব যুক্ত করা হয়নি।
+                  এখনো কোনো হিসাব যুক্ত করা হয়নি।
                 </p>
               ) : (
-                /* Responsive Horizontal Table Container */
                 <div className="overflow-x-auto no-scrollbar">
                   <table className="w-full text-left border-collapse min-w-[700px]">
                     <thead>
@@ -662,7 +720,7 @@ export default function Admin() {
 
               {analytics.filteredVisitors.length === 0 ? (
                 <div className="py-10 text-center text-xs text-slate-500 italic">
-                  কোনো ভিজিটর পাওয়া যায়নি।
+                  কোনো ভিজিটর পাওয়া যায়নি।
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 no-scrollbar">
@@ -694,12 +752,22 @@ export default function Admin() {
           </div>
         )}
 
-        {/* TAB 2: ADD NEW WORK */}
+        {/* TAB 2: ADD NEW WORK / EDIT WORK */}
         {activeTab === "add-work" && (
           <div className="p-6 rounded-2xl bg-[#0d121f] border border-slate-800/80 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-5 pb-3 border-b border-slate-800/60">
-              Add New Project
-            </h2>
+            <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-800/60">
+              <h2 className="text-lg font-bold text-white">
+                {editingId ? "Edit Project" : "Add New Project"}
+              </h2>
+              {editingId && (
+                <button
+                  onClick={resetWorkForm}
+                  className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
 
             <form onSubmit={handleAddWork} className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
@@ -728,28 +796,39 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Video Link (YouTube) *</label>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Video Link (YouTube / Google Drive) *</label>
                   <input
                     type="text"
                     value={videoUrl}
                     onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="https://youtu.be/..."
+                    placeholder="https://youtu.be/... or Google Drive Link"
                     required
                     className="w-full p-3 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-white outline-none focus:border-blue-500 mt-1"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thumbnail Image</label>
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Order / Position (1 = Top)</label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="w-full p-2 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-blue-600 file:text-white cursor-pointer mt-1"
+                    type="number"
+                    min="1"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-blue-400 font-bold outline-none focus:border-blue-500 mt-1"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thumbnail Image (Upload File)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="w-full p-2 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-blue-600 file:text-white cursor-pointer mt-1"
+                />
               </div>
 
               <div>
@@ -768,43 +847,66 @@ export default function Admin() {
                 disabled={uploading}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-500/20"
               >
-                {uploading ? "Publishing..." : "Publish Project"}
+                {uploading ? "Publishing..." : editingId ? "Update Project" : "Publish Project"}
               </button>
             </form>
           </div>
         )}
 
-        {/* TAB 3: EXISTING POSTS */}
+        {/* TAB 3: EXISTING POSTS (WITH POSITION ORDERING AND EDIT BUTTON) */}
         {activeTab === "existing-works" && (
           <div className="p-6 rounded-2xl bg-[#0d121f] border border-slate-800/80 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-5 pb-3 border-b border-slate-800/60">
-              Existing Portfolio Posts ({works.length})
+            <h2 className="text-lg font-bold text-white mb-5 pb-3 border-b border-slate-800/60 flex items-center justify-between">
+              <span>Existing Portfolio Posts ({works.length})</span>
+              <span className="text-xs text-slate-500 font-normal">Change "Order #" to re-arrange videos</span>
             </h2>
 
             {works.length === 0 ? (
-              <p className="text-slate-500 text-xs italic py-6 text-center">এখনো কোনো প্রজেক্ট আপলোড করা হয়নি।</p>
+              <p className="text-slate-500 text-xs italic py-6 text-center">এখনো কোনো প্রজেক্ট আপলোড করা হয়নি।</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {works.map((item) => (
+              <div className="space-y-3">
+                {works.map((item, index) => (
                   <div
                     key={item.id}
-                    className="p-3.5 rounded-xl bg-[#080b12] border border-slate-800/80 flex items-center justify-between gap-3"
+                    className="p-3.5 rounded-xl bg-[#080b12] border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 hover:border-slate-700 transition-all"
                   >
-                    <div className="overflow-hidden">
-                      <span className="text-[9px] uppercase font-bold text-blue-400 px-2 py-0.5 rounded bg-blue-500/10">
-                        {item.category}
-                      </span>
-                      <h3 className="font-semibold text-slate-200 text-xs truncate mt-1">
-                        {item.title}
-                      </h3>
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      {/* Order / Position Box */}
+                      <div className="flex flex-col items-center justify-center bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg shrink-0">
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">Order #</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.position || index + 1}
+                          onChange={(e) => handleUpdatePosition(item.id, e.target.value)}
+                          className="w-10 text-center bg-transparent font-black text-blue-400 text-xs outline-none"
+                        />
+                      </div>
+
+                      <div className="overflow-hidden">
+                        <span className="text-[9px] uppercase font-bold text-blue-400 px-2 py-0.5 rounded bg-blue-500/10">
+                          {item.category}
+                        </span>
+                        <h3 className="font-semibold text-slate-200 text-xs truncate mt-1">
+                          {item.title}
+                        </h3>
+                      </div>
                     </div>
 
-                    <button
-                      onClick={() => handleDeleteWork(item.id)}
-                      className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-lg text-[11px] font-bold transition-all shrink-0"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditWork(item)}
+                        className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg text-[11px] font-bold transition-all border border-blue-500/20"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWork(item.id)}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-lg text-[11px] font-bold transition-all border border-red-500/20 shrink-0"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -9,6 +9,9 @@ const App = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Video Modal State (ড্রাইভ ও ইউটিউব ভিডিও প্লে করার জন্য)
+  const [selectedVideoUrl, setSelectedVideoUrl] = useState(null);
+
   // Supabase Data State
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +44,6 @@ const App = () => {
     "Commercial Editing"
   ];
 
-  // AUTOMATIC VISITOR DETECTION LOGIC
   useEffect(() => {
     trackVisitor();
   }, []);
@@ -68,7 +70,6 @@ const App = () => {
     }
   };
 
-  // Text Slider Logic
   useEffect(() => {
     const timer = setInterval(() => {
       setFade(false);
@@ -97,18 +98,19 @@ const App = () => {
     };
   }, []);
 
-  // Fetch Works & Social Links
   useEffect(() => {
     fetchWorks();
     fetchSocialLinks();
   }, []);
 
+  // position কলাম অনুযায়ী ১, ২, ৩ নম্বর সিরিয়ালে ডাটা ফচ করার আপডেট লজিক
   const fetchWorks = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from("works")
         .select("*")
+        .order("position", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -136,7 +138,6 @@ const App = () => {
     }
   };
 
-  // Form Submit Handler for Popup
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -166,8 +167,20 @@ const App = () => {
     }
   };
 
+  // NO AUTOPLAY EMBED URL GENERATOR (SUPPORTING BOTH DRIVE AND YOUTUBE)
   const getEmbedUrl = (url) => {
     if (!url) return "";
+
+    if (url.includes("drive.google.com")) {
+      if (url.includes("/view")) {
+        return url.replace(/\/view(\?.*)?$/, "/preview");
+      }
+      if (!url.endsWith("/preview")) {
+        return `${url.split("?")[0]}/preview`;
+      }
+      return url;
+    }
+
     let videoId = "";
     if (url.includes("youtu.be/")) {
       videoId = url.split("youtu.be/")[1]?.split("?")[0];
@@ -175,7 +188,8 @@ const App = () => {
       const urlParams = new URLSearchParams(url.split("?")[1]);
       videoId = urlParams.get("v");
     }
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+
+    return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0` : url;
   };
 
   const socialLinks = [
@@ -229,6 +243,29 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
+      {/* VIDEO POPUP MODAL */}
+      {selectedVideoUrl && (
+        <div className="fixed inset-0 z-[99999] bg-slate-950/90 backdrop-blur-lg flex items-center justify-center p-4 md:p-8">
+          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+            <button
+              onClick={() => setSelectedVideoUrl(null)}
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-slate-950/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700"
+            >
+              ✕
+            </button>
+            <div className="w-full aspect-video">
+              <iframe
+                src={getEmbedUrl(selectedVideoUrl)}
+                title="Video Player"
+                className="w-full h-full border-0"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SUCCESS POPUP MODAL */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -381,46 +418,72 @@ const App = () => {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-8">
-              {filteredWorks.map((item) => (
-                <div
-                  key={item.id}
-                  className="group p-5 rounded-[28px] bg-slate-950 border border-slate-800 hover:border-blue-500/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_80px_rgba(59,130,246,0.12)] flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="w-full aspect-video rounded-[20px] bg-slate-900 border border-slate-800 mb-5 overflow-hidden relative">
-                      {item.video_url ? (
-                        <iframe
-                          src={getEmbedUrl(item.video_url)}
-                          title={item.title}
-                          className="w-full h-full border-0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        ></iframe>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-600">
-                          No Video Link
-                        </div>
+              {filteredWorks.map((item) => {
+                const thumbnailUrl = item.thumbnail_url || item.image_url || item.thumbnail;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="group p-5 rounded-[28px] bg-slate-950 border border-slate-800 hover:border-blue-500/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_80px_rgba(59,130,246,0.12)] flex flex-col justify-between"
+                  >
+                    <div>
+                      <div 
+                        onClick={() => item.video_url && setSelectedVideoUrl(item.video_url)}
+                        className="w-full aspect-video rounded-[20px] bg-slate-900 border border-slate-800 mb-5 overflow-hidden relative cursor-pointer group/thumb"
+                      >
+                        {thumbnailUrl ? (
+                          <img
+                            src={thumbnailUrl}
+                            alt={item.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover/thumb:scale-105"
+                          />
+                        ) : item.video_url ? (
+                          <iframe
+                            src={getEmbedUrl(item.video_url)}
+                            title={item.title}
+                            className="w-full h-full border-0 pointer-events-none"
+                          ></iframe>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-600">
+                            No Video or Image
+                          </div>
+                        )}
+
+                        {/* কাস্টম ওভারলে প্লে বাটন */}
+                        {item.video_url && (
+                          <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center transition-all group-hover/thumb:bg-slate-950/20">
+                            <div className="w-14 h-14 bg-blue-600/90 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-600/50 group-hover/thumb:scale-110 transition-all">
+                              <svg
+                                className="w-6 h-6 ml-1"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-wider">
+                          {item.category || "Video Editing"}
+                        </span>
+                      </div>
+
+                      <h4 className="text-xl font-bold mb-2 text-white group-hover:text-blue-400 transition-colors">
+                        {item.title}
+                      </h4>
+
+                      {item.desc && (
+                        <p className="text-slate-400 text-sm leading-relaxed mb-4 line-clamp-3">
+                          {item.desc}
+                        </p>
                       )}
                     </div>
-
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-wider">
-                        {item.category || "Video Editing"}
-                      </span>
-                    </div>
-
-                    <h4 className="text-xl font-bold mb-2 text-white group-hover:text-blue-400 transition-colors">
-                      {item.title}
-                    </h4>
-
-                    {item.desc && (
-                      <p className="text-slate-400 text-sm leading-relaxed mb-4 line-clamp-3">
-                        {item.desc}
-                      </p>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -435,7 +498,7 @@ const App = () => {
             </p>
 
             <h3 className="text-2xl md:text-3xl font-black mb-6 text-white">
-              Contact with Email
+              Contact via Email
             </h3>
 
             <form onSubmit={handleFormSubmit} className="space-y-3 text-left">
@@ -469,7 +532,6 @@ const App = () => {
               </button>
             </form>
 
-            {/* Dynamic Social Media Links Container */}
             <div className="mt-10 pt-6 border-t border-slate-800/60">
               <h4 className="text-base sm:text-lg font-bold text-slate-200 mb-4">
                 Prefer Instant Messaging? Reach Out Here
