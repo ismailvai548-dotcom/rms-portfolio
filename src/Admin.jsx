@@ -19,9 +19,16 @@ export default function Admin() {
   const [works, setWorks] = useState([]);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Video Editing");
+  
+  // Video Options (URL vs File Upload)
+  const [videoInputType, setVideoInputType] = useState("url"); // 'url' or 'file'
   const [videoUrl, setVideoUrl] = useState("");
+  const [videoFile, setVideoFile] = useState(null);
+
+  // Thumbnail Options
   const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState(null);
+
   const [desc, setDesc] = useState("");
   const [position, setPosition] = useState(1);
   const [uploading, setUploading] = useState(false);
@@ -194,7 +201,7 @@ export default function Admin() {
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleImageFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImageFile(file);
@@ -202,11 +209,27 @@ export default function Admin() {
     }
   };
 
+  const handleVideoFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setVideoFile(e.target.files[0]);
+    }
+  };
+
   // Work Add / Edit Handler
   const handleAddWork = async (e) => {
     e.preventDefault();
-    if (!title || !videoUrl) {
-      alert("টাইটেল এবং ভিডিও লিংক আবশ্যক!");
+    if (!title) {
+      alert("টাইটেল দেওয়া আবশ্যক!");
+      return;
+    }
+
+    if (videoInputType === "url" && !videoUrl) {
+      alert("ভিডিও লিংক দেওয়া আবশ্যক!");
+      return;
+    }
+
+    if (videoInputType === "file" && !videoFile && !editingId) {
+      alert("ভিডিও ফাইল সিলেক্ট করা আবশ্যক!");
       return;
     }
 
@@ -214,12 +237,13 @@ export default function Admin() {
     setMsg("");
 
     let finalImageUrl = imageUrl;
+    let finalVideoUrl = videoUrl;
 
-    // আলাদা thumbnails বাকেটে আপলোড করা হচ্ছে
-    if (imageFile) {
-      try {
+    try {
+      // 1. Upload Thumbnail Image to 'thumbnails' bucket (if selected)
+      if (imageFile) {
         const fileExt = imageFile.name.split(".").pop();
-        const fileName = `${Date.now()}.${fileExt}`;
+        const fileName = `thumb_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${fileExt}`;
         const { data: storageData, error: storageError } = await supabase.storage
           .from("thumbnails")
           .upload(fileName, imageFile);
@@ -229,55 +253,68 @@ export default function Admin() {
             .from("thumbnails")
             .getPublicUrl(fileName);
           finalImageUrl = publicUrlData.publicUrl;
+        } else if (storageError) {
+          console.error("Thumbnail Upload Error:", storageError.message);
         }
-      } catch (err) {
-        console.log("Storage upload skipped or fallback to URL", err);
       }
-    }
 
-    if (editingId) {
-      const { error } = await supabase
-        .from("works")
-        .update({
-          title,
-          category,
-          video_url: videoUrl,
-          image_url: finalImageUrl,
-          desc,
-          position: Number(position)
-        })
-        .eq("id", editingId);
+      // 2. Upload Video File to 'videos' bucket (if 'file' input selected)
+      if (videoInputType === "file" && videoFile) {
+        const fileExt = videoFile.name.split(".").pop();
+        const fileName = `video_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${fileExt}`;
+        const { data: vidStorageData, error: vidStorageError } = await supabase.storage
+          .from("videos")
+          .upload(fileName, videoFile);
 
-      setUploading(false);
+        if (!vidStorageError && vidStorageData) {
+          const { data: publicUrlData } = supabase.storage
+            .from("videos")
+            .getPublicUrl(fileName);
+          finalVideoUrl = publicUrlData.publicUrl;
+        } else if (vidStorageError) {
+          throw new Error("Video Upload Failed: " + vidStorageError.message);
+        }
+      }
 
-      if (error) {
-        setMsg("আপডেট করতে সমস্যা হয়েছে: " + error.message);
-      } else {
+      // 3. Update or Insert into 'works' Table
+      if (editingId) {
+        const { error } = await supabase
+          .from("works")
+          .update({
+            title,
+            category,
+            video_url: finalVideoUrl,
+            image_url: finalImageUrl,
+            desc,
+            position: Number(position)
+          })
+          .eq("id", editingId);
+
+        if (error) throw error;
         setMsg("প্রজেক্ট সফলভাবে আপডেট করা হয়েছে! 🎉");
-        resetWorkForm();
-        fetchWorks();
-      }
-    } else {
-      const { error } = await supabase.from("works").insert([
-        {
-          title,
-          category,
-          video_url: videoUrl,
-          image_url: finalImageUrl,
-          desc,
-          position: Number(position || works.length + 1)
-        }
-      ]);
-
-      setUploading(false);
-
-      if (error) {
-        setMsg("ভিডিও আপলোড করতে সমস্যা হয়েছে: " + error.message);
       } else {
+        const { error } = await supabase.from("works").insert([
+          {
+            title,
+            category,
+            video_url: finalVideoUrl,
+            image_url: finalImageUrl,
+            desc,
+            position: Number(position || works.length + 1)
+          }
+        ]);
+
+        if (error) throw error;
         setMsg("প্রজেক্ট সফলভাবে পোস্ট করা হয়েছে! 🎉");
-        resetWorkForm();
-        fetchWorks();
       }
+
+      resetWorkForm();
+      fetchWorks();
+
+    } catch (err) {
+      setMsg("সমস্যা হয়েছে: " + err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -289,6 +326,7 @@ export default function Admin() {
     setImageUrl(item.image_url || item.thumbnail_url || "");
     setDesc(item.desc || "");
     setPosition(item.position || 1);
+    setVideoInputType("url");
     setActiveTab("add-work");
   };
 
@@ -296,6 +334,7 @@ export default function Admin() {
     setEditingId(null);
     setTitle("");
     setVideoUrl("");
+    setVideoFile(null);
     setImageUrl("");
     setImageFile(null);
     setDesc("");
@@ -792,16 +831,68 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Video Link (YouTube / Google Drive) *</label>
+              {/* VIDEO INPUT TYPE SELECTOR */}
+              <div className="p-4 rounded-xl bg-[#080b12] border border-slate-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    Video Source *
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setVideoInputType("url")}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        videoInputType === "url"
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-900 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Paste Link (YouTube/Drive)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVideoInputType("file")}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        videoInputType === "file"
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-900 text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Upload Video File (PC)
+                    </button>
+                  </div>
+                </div>
+
+                {videoInputType === "url" ? (
+                  <div>
+                    <input
+                      type="text"
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="https://youtu.be/... or Google Drive Link"
+                      className="w-full p-3 rounded-xl bg-[#0d121f] border border-slate-800 text-xs text-white outline-none focus:border-blue-500 mt-1"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoFileChange}
+                      className="w-full p-2 rounded-xl bg-[#0d121f] border border-slate-800 text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-blue-600 file:text-white cursor-pointer mt-1"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thumbnail Image (Upload File)</label>
                   <input
-                    type="text"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="https://youtu.be/... or Google Drive Link"
-                    required
-                    className="w-full p-3 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-white outline-none focus:border-blue-500 mt-1"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="w-full p-2 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-blue-600 file:text-white cursor-pointer mt-1"
                   />
                 </div>
 
@@ -818,16 +909,6 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thumbnail Image (Upload File)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full p-2 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-blue-600 file:text-white cursor-pointer mt-1"
-                />
-              </div>
-
-              <div>
                 <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Description</label>
                 <textarea
                   value={desc}
@@ -841,9 +922,9 @@ export default function Admin() {
               <button
                 type="submit"
                 disabled={uploading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-500/20"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
               >
-                {uploading ? "Publishing..." : editingId ? "Update Project" : "Publish Project"}
+                {uploading ? "Publishing & Uploading..." : editingId ? "Update Project" : "Publish Project"}
               </button>
             </form>
           </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ReactPlayer from "react-player";
 import { supabase } from "./supabaseClient";
 
 const App = () => {
@@ -166,44 +167,21 @@ const App = () => {
     }
   };
 
-  // SMART VIDEO TYPE DETECTOR
+  // HANDLES GOOGLE DRIVE, YOUTUBE & LOCAL PUBLIC PATH VIDEOS
   const getVideoDetails = (url) => {
     if (!url) return { type: "unknown", embedUrl: "" };
-    const lowerUrl = url.toLowerCase();
 
-    // 1. DIRECT MP4 / SUPABASE (Native HTML5 Player - 100% Clean)
-    if (lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || url.includes("supabase.co") || url.startsWith("/videos/")) {
-      return { type: "native", embedUrl: url };
-    }
+    const lower = url.toLowerCase();
 
-    // 2. YOUTUBE (Iframe with minimal branding)
-    if (url.includes("youtu.be") || url.includes("youtube.com")) {
-      let videoId = "";
-      if (url.includes("/shorts/")) {
-        videoId = url.split("/shorts/")[1]?.split("?")[0];
-      } else if (url.includes("youtu.be/")) {
-        videoId = url.split("youtu.be/")[1]?.split("?")[0];
-      } else if (url.includes("youtube.com/watch")) {
-        const urlParams = new URLSearchParams(url.split("?")[1]);
-        videoId = urlParams.get("v");
-      } else if (url.includes("youtube.com/embed/")) {
-        videoId = url.split("youtube.com/embed/")[1]?.split("?")[0];
-      }
-      return {
-        type: "iframe",
-        embedUrl: videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0&modestbranding=1` : url
-      };
-    }
-
-    // 3. GOOGLE DRIVE (Iframe - Google blocks native streaming)
+    // 1. Google Drive Links (Maintains existing fix)
     if (url.includes("drive.google.com")) {
       let fileId = "";
       const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
         fileId = match[1];
       } else {
-        const urlParams = new URLSearchParams(url.split("?")[1]);
-        fileId = urlParams.get("id");
+        const urlParams = new URLSearchParams(url.split("?")[1] || "");
+        fileId = urlParams.get("id") || "";
       }
       return {
         type: "iframe",
@@ -211,7 +189,41 @@ const App = () => {
       };
     }
 
-    return { type: "iframe", embedUrl: url };
+    // 2. YouTube Links (Maintains existing fix)
+    if (url.includes("youtu.be") || url.includes("youtube.com")) {
+      let videoId = "";
+      if (url.includes("/shorts/")) {
+        videoId = url.split("/shorts/")[1]?.split("?")[0];
+      } else if (url.includes("youtu.be/")) {
+        videoId = url.split("youtu.be/")[1]?.split("?")[0];
+      } else if (url.includes("youtube.com/watch")) {
+        const urlParams = new URLSearchParams(url.split("?")[1] || "");
+        videoId = urlParams.get("v") || "";
+      } else if (url.includes("youtube.com/embed/")) {
+        videoId = url.split("youtube.com/embed/")[1]?.split("?")[0];
+      }
+      return {
+        type: "iframe",
+        embedUrl: videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1` : url
+      };
+    }
+
+    // 3. Local Public Path / Direct Video File (e.g. /videos/demo.mp4, public/video.mp4, Supabase)
+    let cleanUrl = url.trim();
+
+    // Fix 'public/' folder relative paths
+    if (cleanUrl.startsWith("public/")) {
+      cleanUrl = "/" + cleanUrl.replace(/^public\//, "");
+    } else if (cleanUrl.startsWith("/public/")) {
+      cleanUrl = cleanUrl.replace(/^\/public\//, "/");
+    }
+
+    // Ensure leading slash for local relative paths
+    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://") && !cleanUrl.startsWith("/")) {
+      cleanUrl = "/" + cleanUrl;
+    }
+
+    return { type: "video", embedUrl: cleanUrl };
   };
 
   const socialLinks = [
@@ -267,7 +279,7 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* FULLY RESPONSIVE PERFECT-FIT VIDEO MODAL */}
+      {/* PERFECT MOBILE-RESPONSIVE FIT-TO-SCREEN VIDEO POPUP MODAL */}
       {selectedVideoUrl && (
         <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6 overflow-hidden">
           <div className="relative w-full max-w-4xl bg-black border border-slate-800 rounded-xl sm:rounded-3xl overflow-hidden shadow-2xl my-auto flex flex-col justify-center">
@@ -281,26 +293,26 @@ const App = () => {
               ✕
             </button>
 
-            {/* Video Player Box - Enforces 16:9 Aspect Ratio and PERFECT FIT */}
+            {/* Video Player Container */}
             <div className="w-full relative aspect-video bg-black flex items-center justify-center overflow-hidden shadow-2xl">
-              {activeVideoDetails.type === "native" ? (
-                /* NATIVE HTML5 PLAYER (Only works for pure .mp4 / Supabase) */
+              {activeVideoDetails.type === "iframe" ? (
+                <iframe
+                  src={activeVideoDetails.embedUrl}
+                  className="w-full h-full border-0 absolute top-0 left-0"
+                  allow="autoplay; encrypted-media; picture-in-picture; accelerometer; clipboard-write; gyroscope"
+                  allowFullScreen
+                  title="Video Player"
+                />
+              ) : (
                 <video
                   src={activeVideoDetails.embedUrl}
                   controls
                   autoPlay
-                  playsInline // Ensures video stays within container on mobile
-                  className="w-full h-full absolute inset-0 object-contain"
-                />
-              ) : (
-                /* IFRAME PLAYER (For Google Drive & YouTube) */
-                <iframe
-                  src={activeVideoDetails.embedUrl}
-                  title="Video Player"
-                  className="w-full h-full border-0 absolute inset-0 object-contain"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
+                  playsInline
+                  className="w-full h-full object-contain absolute top-0 left-0"
+                >
+                  Your browser does not support the video tag.
+                </video>
               )}
             </div>
           </div>
@@ -484,8 +496,8 @@ const App = () => {
                             }}
                           />
                         ) : item.video_url ? (
-                          <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-900">
-                            Play Video
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-900 font-bold text-sm">
+                            Click to Play Video
                           </div>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-600">
@@ -515,7 +527,10 @@ const App = () => {
                         </span>
                       </div>
 
-                      <h4 className="text-xl font-bold mb-2 text-white group-hover:text-blue-400 transition-colors">
+                      <h4 
+                        onClick={() => item.video_url && setSelectedVideoUrl(item.video_url)}
+                        className="text-xl font-bold mb-2 text-white group-hover:text-blue-400 transition-colors cursor-pointer"
+                      >
                         {item.title}
                       </h4>
 
