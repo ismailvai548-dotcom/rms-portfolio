@@ -5,6 +5,10 @@ const App = () => {
   const [showIntro, setShowIntro] = useState(true);
   const [playSweep, setPlaySweep] = useState(false);
 
+  // Popup Modal State
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Supabase Data State
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,25 +41,22 @@ const App = () => {
     "Commercial Editing"
   ];
 
-  // AUTOMATIC VISITOR DETECTION LOGIC (WITHOUT DELETING ANYTHING)
+  // AUTOMATIC VISITOR DETECTION LOGIC
   useEffect(() => {
     trackVisitor();
   }, []);
 
   const trackVisitor = async () => {
     try {
-      // 1. Get or Create Unique Visitor ID
       let visitorId = localStorage.getItem("rm_portfolio_visitor_id");
       if (!visitorId) {
         visitorId = "visitor_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now();
         localStorage.setItem("rm_portfolio_visitor_id", visitorId);
       }
 
-      // 2. Detect Device Type
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const device = isMobile ? "Mobile" : "Desktop";
 
-      // 3. Record Visit Entry to Supabase
       await supabase.from("page_views").insert([
         {
           visitor_id: visitorId,
@@ -114,8 +115,7 @@ const App = () => {
       if (data) setWorks(data);
     } catch (err) {
       console.error("Error fetching works:", err.message);
-    } font
-    finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -133,6 +133,36 @@ const App = () => {
       }
     } catch (err) {
       console.error("Error fetching social links:", err.message);
+    }
+  };
+
+  // Form Submit Handler for Popup
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const form = e.target;
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch("https://formspree.io/f/mwvykpvl", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json"
+        }
+      });
+
+      if (response.ok) {
+        setShowSuccessModal(true);
+        form.reset();
+      } else {
+        alert("Oops! There was a problem submitting your form.");
+      }
+    } catch (error) {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -198,6 +228,32 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
+      
+      {/* SUCCESS POPUP MODAL */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 text-blue-400">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            
+            <h3 className="text-2xl font-black text-white mb-2">Thank You!</h3>
+            <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+              Your message has been received successfully. I will get back to you shortly!
+            </p>
+
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 active:scale-95"
+            >
+              Back To Portfolio
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Intro Overlay */}
       {showIntro && (
         <div className="fixed inset-0 z-[999] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center intro-container">
@@ -378,16 +434,11 @@ const App = () => {
               Get In Touch
             </p>
 
-            {/* 1. NEW CUSTOM HEADER FOR ORDER */}
             <h3 className="text-2xl md:text-3xl font-black mb-6 text-white">
-              Start Your Project Today — Order Now
+              Contact with Email
             </h3>
 
-            <form
-              action="https://formspree.io/f/mwvykpvl"
-              method="POST"
-              className="space-y-3 text-left"
-            >
+            <form onSubmit={handleFormSubmit} className="space-y-3 text-left">
               <input
                 type="text"
                 name="name"
@@ -411,15 +462,15 @@ const App = () => {
               ></textarea>
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-widest transition-all"
+                disabled={isSubmitting}
+                className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50"
               >
-                Send Message
+                {isSubmitting ? "Sending..." : "Send Message"}
               </button>
             </form>
 
             {/* Dynamic Social Media Links Container */}
             <div className="mt-10 pt-6 border-t border-slate-800/60">
-              {/* 2. NEW CUSTOM HEADER FOR INSTANT MESSAGING */}
               <h4 className="text-base sm:text-lg font-bold text-slate-200 mb-4">
                 Prefer Instant Messaging? Reach Out Here
               </h4>
