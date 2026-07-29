@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import ReactPlayer from "react-player";
 import { supabase } from "./supabaseClient";
 
 const App = () => {
@@ -167,35 +166,17 @@ const App = () => {
     }
   };
 
-  // EXTRACT GOOGLE DRIVE FILE ID OR YOUTUBE EMBED
+  // SMART VIDEO TYPE DETECTOR
   const getVideoDetails = (url) => {
-    if (!url) return { type: "unknown", url: "" };
+    if (!url) return { type: "unknown", embedUrl: "" };
+    const lowerUrl = url.toLowerCase();
 
-    const lower = url.toLowerCase();
-
-    // Direct Video File contingency (In case user manages paths later)
-    if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mov") || url.includes("supabase.co/storage")) {
-      return { type: "direct", embedUrl: url };
+    // 1. DIRECT MP4 / SUPABASE (Native HTML5 Player - 100% Clean)
+    if (lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || url.includes("supabase.co") || url.startsWith("/videos/")) {
+      return { type: "native", embedUrl: url };
     }
 
-    // Google Drive Links (Extracts ID and generates a cleaner embed URL)
-    if (url.includes("drive.google.com")) {
-      let fileId = "";
-      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        fileId = match[1];
-      } else {
-        const urlParams = new URLSearchParams(url.split("?")[1]);
-        fileId = urlParams.get("id");
-      }
-      return {
-        type: "drive",
-        // Embed without control headers for minimal Drive branding
-        embedUrl: fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url
-      };
-    }
-
-    // YouTube Links (Handles standard, mobile, shorts)
+    // 2. YOUTUBE (Iframe with minimal branding)
     if (url.includes("youtu.be") || url.includes("youtube.com")) {
       let videoId = "";
       if (url.includes("/shorts/")) {
@@ -209,13 +190,28 @@ const App = () => {
         videoId = url.split("youtube.com/embed/")[1]?.split("?")[0];
       }
       return {
-        type: "youtube",
-        // Minimum branding parameters for YouTube
-        embedUrl: videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1` : url
+        type: "iframe",
+        embedUrl: videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0&modestbranding=1` : url
       };
     }
 
-    return { type: "direct", embedUrl: url };
+    // 3. GOOGLE DRIVE (Iframe - Google blocks native streaming)
+    if (url.includes("drive.google.com")) {
+      let fileId = "";
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        fileId = match[1];
+      } else {
+        const urlParams = new URLSearchParams(url.split("?")[1]);
+        fileId = urlParams.get("id");
+      }
+      return {
+        type: "iframe",
+        embedUrl: fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url
+      };
+    }
+
+    return { type: "iframe", embedUrl: url };
   };
 
   const socialLinks = [
@@ -271,12 +267,12 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* PERFECT MOBILE-RESPONSIVE FIT-TO-SCREEN VIDEO POPUP MODAL */}
+      {/* FULLY RESPONSIVE PERFECT-FIT VIDEO MODAL */}
       {selectedVideoUrl && (
         <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6 overflow-hidden">
           <div className="relative w-full max-w-4xl bg-black border border-slate-800 rounded-xl sm:rounded-3xl overflow-hidden shadow-2xl my-auto flex flex-col justify-center">
             
-            {/* Close Button (Floating & Clean) */}
+            {/* Close Button */}
             <button
               onClick={() => setSelectedVideoUrl(null)}
               className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50 w-9 h-9 sm:w-11 sm:h-11 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700/80 font-bold text-sm shadow-xl"
@@ -285,27 +281,27 @@ const App = () => {
               ✕
             </button>
 
-            {/* Video Player Box Container - Ensures 16:9 Aspect Ratio and Clean Centered View */}
+            {/* Video Player Box - Enforces 16:9 Aspect Ratio and PERFECT FIT */}
             <div className="w-full relative aspect-video bg-black flex items-center justify-center overflow-hidden shadow-2xl">
-              <ReactPlayer
-                url={activeVideoDetails.embedUrl}
-                playing={true} // Tries to Autoplay (will be muted on mobile browser)
-                muted={true} // Essential for mobile autoplay. User must unmute for sound.
-                controls={true} // Shows native player controls
-                width="100%"
-                height="100%"
-                className="absolute top-0 left-0"
-                style={{ width: "100%", height: "100%" }}
-                config={{
-                  // MINIMAL BRANDING for Google Drive
-                  // Removes dark overlay and headers as much as possible for /preview links
-                  file: {
-                    attributes: {
-                      style: { width: "100%", height: "100%", objectFit: "contain" }
-                    }
-                  }
-                }}
-              />
+              {activeVideoDetails.type === "native" ? (
+                /* NATIVE HTML5 PLAYER (Only works for pure .mp4 / Supabase) */
+                <video
+                  src={activeVideoDetails.embedUrl}
+                  controls
+                  autoPlay
+                  playsInline // Ensures video stays within container on mobile
+                  className="w-full h-full absolute inset-0 object-contain"
+                />
+              ) : (
+                /* IFRAME PLAYER (For Google Drive & YouTube) */
+                <iframe
+                  src={activeVideoDetails.embedUrl}
+                  title="Video Player"
+                  className="w-full h-full border-0 absolute inset-0 object-contain"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              )}
             </div>
           </div>
         </div>
@@ -488,7 +484,6 @@ const App = () => {
                             }}
                           />
                         ) : item.video_url ? (
-                          /* Fallback in case thumbnail is missing but url exists */
                           <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-900">
                             Play Video
                           </div>
@@ -532,7 +527,7 @@ const App = () => {
                     </div>
                   </div>
                 );
-  })}
+              })}
             </div>
           )}
         </div>
