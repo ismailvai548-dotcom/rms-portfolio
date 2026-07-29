@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import ReactPlayer from "react-player";
 import { supabase } from "./supabaseClient";
 
 const App = () => {
@@ -167,6 +166,38 @@ const App = () => {
     }
   };
 
+  // GOOGLE DRIVE & YOUTUBE UNIVERSAL CONVERTER
+  const getEmbedUrl = (url) => {
+    if (!url) return "";
+
+    // 1. Google Drive Link Fix
+    if (url.includes("drive.google.com")) {
+      let fileId = "";
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        fileId = match[1];
+      } else {
+        const urlParams = new URLSearchParams(url.split("?")[1]);
+        fileId = urlParams.get("id");
+      }
+      return fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url;
+    }
+
+    // 2. YouTube Link Fix
+    if (url.includes("youtu.be/") || url.includes("youtube.com")) {
+      let videoId = "";
+      if (url.includes("youtu.be/")) {
+        videoId = url.split("youtu.be/")[1]?.split("?")[0];
+      } else if (url.includes("youtube.com/watch")) {
+        const urlParams = new URLSearchParams(url.split("?")[1]);
+        videoId = urlParams.get("v");
+      }
+      return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` : url;
+    }
+
+    return url;
+  };
+
   const socialLinks = [
     {
       name: "Facebook",
@@ -218,7 +249,7 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* REACT PLAYER MODAL FOR PERFECT MOBILE & DESKTOP PLAYBACK */}
+      {/* PERFECT UNIVERSAL POPUP PLAYER FOR MOBILE & DESKTOP */}
       {selectedVideoUrl && (
         <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6">
           <div className="relative w-full max-w-5xl bg-black rounded-2xl overflow-hidden shadow-2xl my-auto">
@@ -231,16 +262,15 @@ const App = () => {
               ✕
             </button>
 
-            {/* ReactPlayer Container */}
-            <div className="relative pt-[56.25%] w-full bg-black">
-              <ReactPlayer
-                url={selectedVideoUrl}
-                controls={true}
-                playing={true}
-                width="100%"
-                height="100%"
-                className="absolute top-0 left-0"
-              />
+            {/* Responsive Video Container */}
+            <div className="w-full aspect-video bg-black flex items-center justify-center relative">
+              <iframe
+                src={getEmbedUrl(selectedVideoUrl)}
+                title="Video Player"
+                className="w-full h-full border-0 absolute inset-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
             </div>
           </div>
         </div>
@@ -423,14 +453,11 @@ const App = () => {
                             }}
                           />
                         ) : item.video_url ? (
-                          <div className="w-full h-full pointer-events-none">
-                            <ReactPlayer
-                              url={item.video_url}
-                              width="100%"
-                              height="100%"
-                              light={true}
-                            />
-                          </div>
+                          <iframe
+                            src={getEmbedUrl(item.video_url)}
+                            title={item.title}
+                            className="w-full h-full border-0 pointer-events-none"
+                          ></iframe>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-600">
                             No Video or Image
