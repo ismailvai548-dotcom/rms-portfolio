@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ReactPlayer from "react-player";
 import { supabase } from "./supabaseClient";
 
 const App = () => {
@@ -166,18 +167,18 @@ const App = () => {
     }
   };
 
-  // ADVANCED URL ANALYZER (MP4 vs Drive vs YouTube)
+  // EXTRACT GOOGLE DRIVE FILE ID OR YOUTUBE EMBED
   const getVideoDetails = (url) => {
     if (!url) return { type: "unknown", url: "" };
 
     const lower = url.toLowerCase();
 
-    // 1. Direct Video File (Supabase / Custom MP4 / WebM) -> 100% CLEAN NO LOGO
+    // Direct Video File contingency (In case user manages paths later)
     if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mov") || url.includes("supabase.co/storage")) {
       return { type: "direct", embedUrl: url };
     }
 
-    // 2. Google Drive Links
+    // Google Drive Links (Extracts ID and generates a cleaner embed URL)
     if (url.includes("drive.google.com")) {
       let fileId = "";
       const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -189,11 +190,12 @@ const App = () => {
       }
       return {
         type: "drive",
+        // Embed without control headers for minimal Drive branding
         embedUrl: fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url
       };
     }
 
-    // 3. YouTube Links (Minimized Overlay Branding)
+    // YouTube Links (Handles standard, mobile, shorts)
     if (url.includes("youtu.be") || url.includes("youtube.com")) {
       let videoId = "";
       if (url.includes("/shorts/")) {
@@ -206,13 +208,10 @@ const App = () => {
       } else if (url.includes("youtube.com/embed/")) {
         videoId = url.split("youtube.com/embed/")[1]?.split("?")[0];
       }
-
-      // Hide as much youtube UI as possible
       return {
         type: "youtube",
-        embedUrl: videoId
-          ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&controls=1`
-          : url
+        // Minimum branding parameters for YouTube
+        embedUrl: videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1` : url
       };
     }
 
@@ -267,45 +266,46 @@ const App = () => {
       ? works
       : works.filter((w) => w.category === activeCategory);
 
-  const activeVideo = getVideoDetails(selectedVideoUrl);
+  const activeVideoDetails = getVideoDetails(selectedVideoUrl);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* POPUP VIDEO MODAL */}
+      {/* PERFECT MOBILE-RESPONSIVE FIT-TO-SCREEN VIDEO POPUP MODAL */}
       {selectedVideoUrl && (
-        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
-          <div className="relative w-full max-w-4xl bg-black rounded-2xl sm:rounded-3xl border border-slate-800 overflow-hidden shadow-2xl my-auto">
+        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6 overflow-hidden">
+          <div className="relative w-full max-w-4xl bg-black border border-slate-800 rounded-xl sm:rounded-3xl overflow-hidden shadow-2xl my-auto flex flex-col justify-center">
             
-            {/* Close Button */}
+            {/* Close Button (Floating & Clean) */}
             <button
               onClick={() => setSelectedVideoUrl(null)}
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50 w-9 h-9 sm:w-11 sm:h-11 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700 font-bold text-sm shadow-2xl"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50 w-9 h-9 sm:w-11 sm:h-11 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700/80 font-bold text-sm shadow-xl"
               title="Close Video"
             >
               ✕
             </button>
 
-            {/* Video Container (Auto Switch HTML5 vs iframe) */}
-            <div className="w-full relative aspect-video bg-black flex items-center justify-center overflow-hidden">
-              {activeVideo.type === "direct" ? (
-                /* 100% CLEAN HTML5 PLAYER FOR SUPABASE / MP4 FILES */
-                <video
-                  src={activeVideo.embedUrl}
-                  controls
-                  autoPlay
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                /* IFRAME PLAYER FOR YOUTUBE / DRIVE */
-                <iframe
-                  src={activeVideo.embedUrl}
-                  title="Video Player"
-                  className="w-full h-full border-0 absolute inset-0 object-contain"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
-              )}
+            {/* Video Player Box Container - Ensures 16:9 Aspect Ratio and Clean Centered View */}
+            <div className="w-full relative aspect-video bg-black flex items-center justify-center overflow-hidden shadow-2xl">
+              <ReactPlayer
+                url={activeVideoDetails.embedUrl}
+                playing={true} // Tries to Autoplay (will be muted on mobile browser)
+                muted={true} // Essential for mobile autoplay. User must unmute for sound.
+                controls={true} // Shows native player controls
+                width="100%"
+                height="100%"
+                className="absolute top-0 left-0"
+                style={{ width: "100%", height: "100%" }}
+                config={{
+                  // MINIMAL BRANDING for Google Drive
+                  // Removes dark overlay and headers as much as possible for /preview links
+                  file: {
+                    attributes: {
+                      style: { width: "100%", height: "100%", objectFit: "contain" }
+                    }
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
@@ -488,11 +488,10 @@ const App = () => {
                             }}
                           />
                         ) : item.video_url ? (
-                          <iframe
-                            src={getVideoDetails(item.video_url).embedUrl}
-                            title={item.title}
-                            className="w-full h-full border-0 pointer-events-none"
-                          ></iframe>
+                          /* Fallback in case thumbnail is missing but url exists */
+                          <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-900">
+                            Play Video
+                          </div>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-600">
                             No Video or Image
@@ -533,7 +532,7 @@ const App = () => {
                     </div>
                   </div>
                 );
-              })}
+  })}
             </div>
           )}
         </div>
