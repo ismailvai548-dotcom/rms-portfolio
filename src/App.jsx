@@ -18,12 +18,12 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
 
-  // Dynamic Social Links State
+  // Dynamic Social Links State (UPDATED LINKS HERE)
   const [socials, setSocials] = useState({
-    facebook: "https://www.facebook.com/profile.php?id=61562833449395",
-    telegram: "https://t.me/rm_rasel_hossain",
-    whatsapp: "https://wa.me/8801933243074",
-    linkedin: "https://linkedin.com"
+    facebook: "https://www.facebook.com/rm.rasel.hossain548",
+    telegram: "https://t.me/RM_Rasel_Hossain",
+    whatsapp: "https://wa.me/8801773622548",
+    linkedin: "https://www.linkedin.com/in/rm-rasel-hossain-532b91403/"
   });
 
   // Single Text Animation State
