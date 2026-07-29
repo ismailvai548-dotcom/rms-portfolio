@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ReactPlayer from "react-player";
 import { supabase } from "./supabaseClient";
 
 const App = () => {
@@ -166,36 +167,6 @@ const App = () => {
     }
   };
 
-  // ADVANCED EMBED URL & AUTOPLAY LOGIC
-  const getEmbedUrl = (url, isModal = false) => {
-    if (!url) return "";
-
-    // Google Drive
-    if (url.includes("drive.google.com")) {
-      let cleanUrl = url;
-      if (cleanUrl.includes("/view")) {
-        cleanUrl = cleanUrl.replace(/\/view(\?.*)?$/, "/preview");
-      }
-      if (!cleanUrl.endsWith("/preview")) {
-        cleanUrl = `${cleanUrl.split("?")[0]}/preview`;
-      }
-      return cleanUrl;
-    }
-
-    // YouTube
-    let videoId = "";
-    if (url.includes("youtu.be/")) {
-      videoId = url.split("youtu.be/")[1]?.split("?")[0];
-    } else if (url.includes("youtube.com/watch")) {
-      const urlParams = new URLSearchParams(url.split("?")[1]);
-      videoId = urlParams.get("v");
-    }
-
-    return videoId
-      ? `https://www.youtube.com/embed/${videoId}?autoplay=${isModal ? 1 : 0}&rel=0`
-      : url;
-  };
-
   const socialLinks = [
     {
       name: "Facebook",
@@ -247,28 +218,29 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* MOBILE FIT-TO-SCREEN & DESKTOP PERFECT VIDEO POPUP MODAL */}
+      {/* REACT PLAYER MODAL FOR PERFECT MOBILE & DESKTOP PLAYBACK */}
       {selectedVideoUrl && (
-        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-0 sm:p-6">
-          <div className="relative w-full max-w-5xl bg-black sm:bg-slate-900 sm:border border-slate-800 sm:rounded-3xl overflow-hidden shadow-2xl my-auto flex flex-col justify-center">
+        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6">
+          <div className="relative w-full max-w-5xl bg-black rounded-2xl overflow-hidden shadow-2xl my-auto">
             {/* Close Button */}
             <button
               onClick={() => setSelectedVideoUrl(null)}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 w-9 h-9 sm:w-11 sm:h-11 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700/80 font-bold text-sm shadow-xl"
+              className="absolute top-3 right-3 z-30 w-9 h-9 sm:w-11 sm:h-11 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700/80 font-bold text-sm shadow-xl"
               title="Close Video"
             >
               ✕
             </button>
 
-            {/* Video Player Box - Fit to Mobile Screen */}
-            <div className="w-full aspect-video bg-black flex items-center justify-center relative overflow-hidden shadow-2xl">
-              <iframe
-                src={getEmbedUrl(selectedVideoUrl, true)}
-                title="Video Player"
-                className="w-full h-full border-0 absolute inset-0 object-cover"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+            {/* ReactPlayer Container */}
+            <div className="relative pt-[56.25%] w-full bg-black">
+              <ReactPlayer
+                url={selectedVideoUrl}
+                controls={true}
+                playing={true}
+                width="100%"
+                height="100%"
+                className="absolute top-0 left-0"
+              />
             </div>
           </div>
         </div>
@@ -451,18 +423,21 @@ const App = () => {
                             }}
                           />
                         ) : item.video_url ? (
-                          <iframe
-                            src={getEmbedUrl(item.video_url, false)}
-                            title={item.title}
-                            className="w-full h-full border-0 pointer-events-none"
-                          ></iframe>
+                          <div className="w-full h-full pointer-events-none">
+                            <ReactPlayer
+                              url={item.video_url}
+                              width="100%"
+                              height="100%"
+                              light={true}
+                            />
+                          </div>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-600">
                             No Video or Image
                           </div>
                         )}
 
-                        {/* কাস্টম ওভারলে প্লে বাটন */}
+                        {/* Custom Overlay Play Button */}
                         {item.video_url && (
                           <div className="absolute inset-0 bg-slate-950/40 flex items-center justify-center transition-all group-hover/thumb:bg-slate-950/10">
                             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-600/90 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-600/50 group-hover/thumb:scale-110 transition-all">
