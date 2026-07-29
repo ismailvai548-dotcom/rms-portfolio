@@ -247,24 +247,25 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* MOBILE & DESKTOP FULLY RESPONSIVE VIDEO POPUP MODAL */}
+      {/* MOBILE FIT-TO-SCREEN & DESKTOP PERFECT VIDEO POPUP MODAL */}
       {selectedVideoUrl && (
-        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
-          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl my-auto">
+        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-0 sm:p-6">
+          <div className="relative w-full max-w-5xl bg-black sm:bg-slate-900 sm:border border-slate-800 sm:rounded-3xl overflow-hidden shadow-2xl my-auto flex flex-col justify-center">
             {/* Close Button */}
             <button
               onClick={() => setSelectedVideoUrl(null)}
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 w-8 h-8 sm:w-10 sm:h-10 bg-slate-950/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700 font-bold text-sm"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 w-9 h-9 sm:w-11 sm:h-11 bg-slate-900/90 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all border border-slate-700/80 font-bold text-sm shadow-xl"
+              title="Close Video"
             >
               ✕
             </button>
 
-            {/* Video Player Box */}
-            <div className="w-full aspect-video bg-black flex items-center justify-center">
+            {/* Video Player Box - Fit to Mobile Screen */}
+            <div className="w-full aspect-video bg-black flex items-center justify-center relative overflow-hidden shadow-2xl">
               <iframe
                 src={getEmbedUrl(selectedVideoUrl, true)}
                 title="Video Player"
-                className="w-full h-full border-0"
+                className="w-full h-full border-0 absolute inset-0 object-cover"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>
@@ -426,7 +427,6 @@ const App = () => {
           ) : (
             <div className="grid md:grid-cols-2 gap-8">
               {filteredWorks.map((item) => {
-                // থাম্বনেইলের আসল লিঙ্ক পাওয়ার জন্য একাধিক কলাম ফিল্ড চেক
                 const thumbImg = item.image_url || item.thumbnail_url || item.thumbnail;
                 const hasThumb = Boolean(thumbImg && typeof thumbImg === 'string' && thumbImg.trim() !== '');
 
