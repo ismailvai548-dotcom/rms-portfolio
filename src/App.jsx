@@ -166,11 +166,18 @@ const App = () => {
     }
   };
 
-  // EXTRACT GOOGLE DRIVE FILE ID OR YOUTUBE EMBED
+  // ADVANCED URL ANALYZER (MP4 vs Drive vs YouTube)
   const getVideoDetails = (url) => {
     if (!url) return { type: "unknown", url: "" };
 
-    // Google Drive Check
+    const lower = url.toLowerCase();
+
+    // 1. Direct Video File (Supabase / Custom MP4 / WebM) -> 100% CLEAN NO LOGO
+    if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mov") || url.includes("supabase.co/storage")) {
+      return { type: "direct", embedUrl: url };
+    }
+
+    // 2. Google Drive Links
     if (url.includes("drive.google.com")) {
       let fileId = "";
       const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -182,23 +189,30 @@ const App = () => {
       }
       return {
         type: "drive",
-        embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
-        directUrl: `https://lh3.googleusercontent.com/d/${fileId}`
+        embedUrl: fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url
       };
     }
 
-    // YouTube Check
-    if (url.includes("youtu.be/") || url.includes("youtube.com")) {
+    // 3. YouTube Links (Minimized Overlay Branding)
+    if (url.includes("youtu.be") || url.includes("youtube.com")) {
       let videoId = "";
-      if (url.includes("youtu.be/")) {
+      if (url.includes("/shorts/")) {
+        videoId = url.split("/shorts/")[1]?.split("?")[0];
+      } else if (url.includes("youtu.be/")) {
         videoId = url.split("youtu.be/")[1]?.split("?")[0];
       } else if (url.includes("youtube.com/watch")) {
         const urlParams = new URLSearchParams(url.split("?")[1]);
         videoId = urlParams.get("v");
+      } else if (url.includes("youtube.com/embed/")) {
+        videoId = url.split("youtube.com/embed/")[1]?.split("?")[0];
       }
+
+      // Hide as much youtube UI as possible
       return {
         type: "youtube",
-        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`
+        embedUrl: videoId
+          ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&controls=1`
+          : url
       };
     }
 
@@ -232,7 +246,7 @@ const App = () => {
       color: "bg-[#25D366]/10 border-[#25D366]/30 hover:bg-[#25D366]/20 hover:border-[#25D366]",
       icon: (
         <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#25D366">
-          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.319 1.592 5.548 0 10.061-4.512 10.063-10.062 0-2.69-1.048-5.216-2.951-7.121s-4.439-2.951-7.128-2.951c-5.55 0-10.061 4.513-10.064 10.063-.001 2.032.547 3.513 1.541 5.143l-1.019 3.722 3.84-.986zm11.367-7.584c-.31-.155-1.837-.906-2.115-1.006-.279-.1-.482-.149-.683.155-.201.304-.777 1.006-.953 1.207-.176.201-.351.226-.662.071-1.144-.572-1.923-.913-2.686-2.219-.201-.344.201-.319.577-1.071.075-.155.038-.291-.019-.396-.057-.106-.482-1.161-.662-1.595-.175-.424-.351-.366-.483-.372h-.411c-.142 0-.372.053-.566.265-.194.212-.741.724-.741 1.765s.757 2.047.863 2.19c.106.142 1.489 2.273 3.606 3.185.504.217.897.347 1.206.445.506.161.966.138 1.33.084.406-.06 1.837-.751 2.096-1.477.259-.725.259-1.347.182-1.477-.077-.13-.284-.207-.594-.362z"/>
+          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.319 1.592 5.548 0 10.061-4.512 10.063-10.062 0-2.69-1.048-5.216-2.951-7.121s-4.439-2.951-7.128-2.951c-5.55 0-10.061 4.513-10.064 10.063-.001 2.032.547 3.513 1.541 5.143l-1.019 3.722 3.84-.986zm11.367-7.584c-.31-.155-1.837-.906-2.115-1.006-.279-.1-.482-.149-.683.155-.201.304-.777 1.006-.953 1.207-.176.201-.351.226-.662.071-1.144-.572-1.923-.913-2.686-2.219-.201-.344.201-.319.577-1.071.075-.155.038-.291-.019-.396-.057-.106-.482-1.161-.662-1.595-.175-.424-.351-.366-.483-.372h-.411c-.142 0-.372.053-.566.265-.194.212-.741.724-.741 1.765s.757 2.047.863 2.19c.106.142 1.489 2.273 3.606 3.185.504.217.897.347 1.206.445.506.161.966.138 1.33.084.406-.06 1.837-.751 2.096-1.477.259-.725.259-1.347.182-1.477-.077-.13-.284-.207-.594-.362z"/>
         </svg>
       )
     },
@@ -258,9 +272,9 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       
-      {/* CLEAN POPUP MODAL (NO GOOGLE DRIVE DARK OVERLAY) */}
+      {/* POPUP VIDEO MODAL */}
       {selectedVideoUrl && (
-        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6">
+        <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
           <div className="relative w-full max-w-4xl bg-black rounded-2xl sm:rounded-3xl border border-slate-800 overflow-hidden shadow-2xl my-auto">
             
             {/* Close Button */}
@@ -272,18 +286,18 @@ const App = () => {
               ✕
             </button>
 
-            {/* Video Player Box - Uses Native Player for Drive to avoid Dark Overlay */}
+            {/* Video Container (Auto Switch HTML5 vs iframe) */}
             <div className="w-full relative aspect-video bg-black flex items-center justify-center overflow-hidden">
-              {activeVideo.type === "drive" ? (
-                <iframe
+              {activeVideo.type === "direct" ? (
+                /* 100% CLEAN HTML5 PLAYER FOR SUPABASE / MP4 FILES */
+                <video
                   src={activeVideo.embedUrl}
-                  title="Video Player"
-                  className="w-full h-full border-0 absolute inset-0 object-contain"
-                  style={{ width: "100%", height: "100%" }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
+                  controls
+                  autoPlay
+                  className="w-full h-full object-contain"
+                />
               ) : (
+                /* IFRAME PLAYER FOR YOUTUBE / DRIVE */
                 <iframe
                   src={activeVideo.embedUrl}
                   title="Video Player"
