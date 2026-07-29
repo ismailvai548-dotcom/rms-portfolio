@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// আপনার সুপাবেস URL এবং Key
-const supabaseUrl = 'https://dlxmzzvcpoysouuakadt.supabase.co';
-const supabaseKey = 'sb_publishable_ws9Yr9RmAiPekGVDUwTu5Q_nr1ntfYZ';
+const supabaseUrl = 'https://dlxmzzvcpoysoouakadt.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRseG16enZjcG95c29vdWFrYWR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMzA3NDEsImV4cCI6MjA5MzcwNjc0MX0.iXQRyqevSoRXvpUG291OFr4bzQq6yEoN6lXvikoJK5g';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
