@@ -172,7 +172,6 @@ export default function Admin() {
     });
   };
 
-  // position কলাম অনুযায়ী সাজিয়ে ডাটা ফচ করার ফাংশন
   const fetchWorks = async () => {
     const { data, error } = await supabase
       .from("works")
@@ -216,6 +215,7 @@ export default function Admin() {
 
     let finalImageUrl = imageUrl;
 
+    // আলাদা thumbnails বাকেটে আপলোড করা হচ্ছে
     if (imageFile) {
       try {
         const fileExt = imageFile.name.split(".").pop();
@@ -236,7 +236,6 @@ export default function Admin() {
     }
 
     if (editingId) {
-      // UPDATE EXISTING WORK
       const { error } = await supabase
         .from("works")
         .update({
@@ -259,7 +258,6 @@ export default function Admin() {
         fetchWorks();
       }
     } else {
-      // INSERT NEW WORK
       const { error } = await supabase.from("works").insert([
         {
           title,
@@ -291,7 +289,7 @@ export default function Admin() {
     setImageUrl(item.image_url || item.thumbnail_url || "");
     setDesc(item.desc || "");
     setPosition(item.position || 1);
-    setActiveTab("add-work"); // Form open for edit
+    setActiveTab("add-work");
   };
 
   const resetWorkForm = () => {
@@ -304,7 +302,6 @@ export default function Admin() {
     setPosition(works.length + 1);
   };
 
-  // Quick Position Update (সরাসরি নম্বর বদলে পজিশন চেঞ্জ)
   const handleUpdatePosition = async (id, newPos) => {
     const { error } = await supabase
       .from("works")
@@ -361,7 +358,6 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Menu Toggle */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-slate-300 transition-all flex items-center gap-2 active:scale-95"
@@ -853,7 +849,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* TAB 3: EXISTING POSTS (WITH POSITION ORDERING AND EDIT BUTTON) */}
+        {/* TAB 3: EXISTING POSTS */}
         {activeTab === "existing-works" && (
           <div className="p-6 rounded-2xl bg-[#0d121f] border border-slate-800/80 shadow-xl">
             <h2 className="text-lg font-bold text-white mb-5 pb-3 border-b border-slate-800/60 flex items-center justify-between">
@@ -871,7 +867,6 @@ export default function Admin() {
                     className="p-3.5 rounded-xl bg-[#080b12] border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 hover:border-slate-700 transition-all"
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
-                      {/* Order / Position Box */}
                       <div className="flex flex-col items-center justify-center bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg shrink-0">
                         <span className="text-[9px] text-slate-500 font-bold uppercase">Order #</span>
                         <input
