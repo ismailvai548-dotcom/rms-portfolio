@@ -2,6 +2,15 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 
 export default function Admin() {
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem("rm_admin_logged_in") === "true";
+  });
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+
+  // Navigation & Filter State
   const [activeTab, setActiveTab] = useState("order-tracker");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [timeFilter, setTimeFilter] = useState("alltime");
@@ -20,8 +29,8 @@ export default function Admin() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Video Editing");
   
-  // Video Options (URL vs File Upload)
-  const [videoInputType, setVideoInputType] = useState("url"); // 'url' or 'file'
+  // Video Options
+  const [videoInputType, setVideoInputType] = useState("url");
   const [videoUrl, setVideoUrl] = useState("");
   const [videoFile, setVideoFile] = useState(null);
 
@@ -40,6 +49,9 @@ export default function Admin() {
     last7Days: 0,
     last30Days: 0,
     allTime: 0,
+    totalViews7: 0,
+    totalViews30: 0,
+    totalViewsAll: 0,
     filteredVisitors: [],
     recentVisitors: []
   });
@@ -54,18 +66,49 @@ export default function Admin() {
 
   const [msg, setMsg] = useState("");
 
+  // Fetch initial data when authenticated
   useEffect(() => {
-    fetchWorks();
-    fetchSocials();
-    fetchAnalytics();
-    fetchOrders();
-  }, []);
+    if (isAuthenticated) {
+      fetchWorks();
+      fetchSocials();
+      fetchAnalytics();
+      fetchOrders();
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (rawViews.length > 0) {
       processAnalytics(rawViews, timeFilter);
     }
   }, [timeFilter, rawViews]);
+
+  // LOGIN HANDLER
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setLoginError("");
+
+    const targetEmail = "rm.rasel.hossain24@gmail.com";
+    const targetPassword = "rasel548";
+
+    if (
+      loginEmail.trim().toLowerCase() === targetEmail &&
+      loginPassword.trim() === targetPassword
+    ) {
+      setIsAuthenticated(true);
+      localStorage.setItem("rm_admin_logged_in", "true");
+      setLoginEmail("");
+      setLoginPassword("");
+    } else {
+      setLoginError("ইমেইল বা পাসওয়ার্ড সঠিক নয়! আবার চেষ্টা করুন।");
+    }
+  };
+
+  // LOGOUT HANDLER
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem("rm_admin_logged_in");
+    setIsMenuOpen(false);
+  };
 
   // Fetch Orders
   const fetchOrders = async () => {
@@ -125,10 +168,14 @@ export default function Admin() {
     }
   };
 
+  // ANALYTICS FETCH & ACCURATE TIME CALCULATIONS
   const fetchAnalytics = async () => {
     try {
       const { data, error } = await supabase.from("page_views").select("*");
-      if (error || !data) return;
+      if (error || !data) {
+        console.error("Analytics Fetch Error:", error);
+        return;
+      }
       setRawViews(data);
       processAnalytics(data, timeFilter);
     } catch (err) {
@@ -137,43 +184,72 @@ export default function Admin() {
   };
 
   const processAnalytics = (data, filterType) => {
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    if (!data || !Array.isArray(data)) return;
 
-    const data7 = data.filter((item) => new Date(item.created_at) >= sevenDaysAgo);
-    const data30 = data.filter((item) => new Date(item.created_at) >= thirtyDaysAgo);
+    const now = new Date().getTime();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+    // Filter by timestamp safely
+    const data7 = data.filter((item) => {
+      if (!item.created_at) return true;
+      const itemTime = new Date(item.created_at).getTime();
+      return now - itemTime <= sevenDaysMs;
+    });
+
+    const data30 = data.filter((item) => {
+      if (!item.created_at) return true;
+      const itemTime = new Date(item.created_at).getTime();
+      return now - itemTime <= thirtyDaysMs;
+    });
 
     let targetDataset = data;
     if (filterType === "7days") targetDataset = data7;
     if (filterType === "30days") targetDataset = data30;
 
+    // Unique Visitors Count Mapping
+    const getUniqueVisitorCount = (dataset) => {
+      const uniqueIds = new Set();
+      dataset.forEach((item) => {
+        if (item.visitor_id) uniqueIds.add(item.visitor_id);
+      });
+      return uniqueIds.size || dataset.length;
+    };
+
     const visitorMap = {};
     targetDataset.forEach((item) => {
-      if (!visitorMap[item.visitor_id]) {
-        visitorMap[item.visitor_id] = {
-          id: item.visitor_id,
+      const vId = item.visitor_id || "guest_visitor";
+      const itemTime = item.created_at || new Date().toISOString();
+
+      if (!visitorMap[vId]) {
+        visitorMap[vId] = {
+          id: vId,
           visits: 0,
           device: item.device_type || "Desktop",
-          lastSeen: item.created_at
+          lastSeen: itemTime
         };
       }
-      visitorMap[item.visitor_id].visits += 1;
-      if (new Date(item.created_at) > new Date(visitorMap[item.visitor_id].lastSeen)) {
-        visitorMap[item.visitor_id].lastSeen = item.created_at;
+      visitorMap[vId].visits += 1;
+      if (new Date(itemTime) > new Date(visitorMap[vId].lastSeen)) {
+        visitorMap[vId].lastSeen = itemTime;
       }
     });
 
-    const sortedRecent = [...data].sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
-    );
+    const sortedRecent = [...data].sort((a, b) => {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return timeB - timeA;
+    });
 
     setAnalytics({
-      last7Days: data7.length,
-      last30Days: data30.length,
-      allTime: data.length,
+      last7Days: getUniqueVisitorCount(data7),
+      last30Days: getUniqueVisitorCount(data30),
+      allTime: getUniqueVisitorCount(data),
+      totalViews7: data7.length,
+      totalViews30: data30.length,
+      totalViewsAll: data.length,
       filteredVisitors: Object.values(visitorMap).sort(
-        (a, b) => new Date(b.lastSeen) - new Date(a.lastSeen)
+        (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
       ),
       recentVisitors: sortedRecent.slice(0, 5)
     });
@@ -240,7 +316,6 @@ export default function Admin() {
     let finalVideoUrl = videoUrl;
 
     try {
-      // 1. Upload Thumbnail Image to 'thumbnails' bucket (if selected)
       if (imageFile) {
         const fileExt = imageFile.name.split(".").pop();
         const fileName = `thumb_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${fileExt}`;
@@ -258,7 +333,6 @@ export default function Admin() {
         }
       }
 
-      // 2. Upload Video File to 'videos' bucket (if 'file' input selected)
       if (videoInputType === "file" && videoFile) {
         const fileExt = videoFile.name.split(".").pop();
         const fileName = `video_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${fileExt}`;
@@ -276,7 +350,6 @@ export default function Admin() {
         }
       }
 
-      // 3. Update or Insert into 'works' Table
       if (editingId) {
         const { error } = await supabase
           .from("works")
@@ -377,6 +450,83 @@ export default function Admin() {
     { id: "social-links", label: "Social Contacts", icon: "🔗" }
   ];
 
+  // ----------------------------------------------------
+  // LOGIN SCREEN (If not authenticated)
+  // ----------------------------------------------------
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#07090e] flex items-center justify-center px-4 font-sans text-slate-100 selection:bg-blue-500/30">
+        <div className="w-full max-w-md bg-[#0b0f17] border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+          {/* Subtle Glow Background */}
+          <div className="absolute -top-12 -left-12 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-12 -right-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div className="text-center mb-8 relative z-10">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-emerald-400 p-[1px] mx-auto mb-4 shadow-lg shadow-blue-500/10">
+              <div className="w-full h-full bg-[#0b0f17] rounded-[15px] flex items-center justify-center font-black text-xl text-blue-400">
+                RM
+              </div>
+            </div>
+            <h1 className="text-2xl font-black text-white tracking-tight">Admin Authentication</h1>
+            <p className="text-xs text-slate-400 mt-1 font-medium">
+              এডমিন ড্যাশবোর্ডে প্রবেশের জন্য লগইন করুন
+            </p>
+          </div>
+
+          {loginError && (
+            <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center font-medium animate-pulse">
+              {loginError}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4 relative z-10">
+            <div>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                Admin Email
+              </label>
+              <input
+                type="email"
+                required
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="rm.rasel.hossain24@gmail.com"
+                className="w-full px-4 py-3 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-white outline-none focus:border-blue-500 transition-all placeholder:text-slate-600"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 rounded-xl bg-[#080b12] border border-slate-800 text-xs text-white outline-none focus:border-blue-500 transition-all placeholder:text-slate-600"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/25 active:scale-95 mt-2"
+            >
+              Login To Admin
+            </button>
+          </form>
+
+          <p className="text-[10px] text-center text-slate-600 mt-8 uppercase tracking-widest font-bold">
+            Protected Admin Access • RM RASEL HOSSAIN
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // MAIN ADMIN DASHBOARD (When Authenticated)
+  // ----------------------------------------------------
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
       {/* Dark Navbar */}
@@ -458,9 +608,15 @@ export default function Admin() {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-800/80 text-center">
-            <p className="text-[10px] text-slate-600 uppercase tracking-widest font-semibold">
-              Admin v2.5 • System Active
+          <div className="pt-4 border-t border-slate-800/80 space-y-3">
+            <button
+              onClick={handleLogout}
+              className="w-full py-2.5 px-3 bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+            >
+              🚪 Logout Admin
+            </button>
+            <p className="text-[10px] text-center text-slate-600 uppercase tracking-widest font-semibold">
+              Admin v2.5 • Secured System
             </p>
           </div>
         </div>
@@ -680,11 +836,19 @@ export default function Admin() {
                 <h2 className="text-xl font-bold tracking-tight text-white">
                   Live Traffic Analytics
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">Click any card below to filter visitors list</p>
+                <p className="text-xs text-slate-500 mt-0.5">Click cards below to filter visitor list</p>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Active
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchAnalytics}
+                  className="px-3 py-1 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 rounded-lg text-xs font-bold transition-all"
+                >
+                  🔄 Refresh Data
+                </button>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Live Sync
+                </div>
               </div>
             </div>
 
@@ -704,7 +868,9 @@ export default function Admin() {
                 <div className="text-3xl font-black text-white tracking-tight">
                   {analytics.last7Days}
                 </div>
-                <p className="text-[10px] text-slate-500 mt-2 font-medium">Click to filter list</p>
+                <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                  Unique Visitors ({analytics.totalViews7} Views)
+                </p>
               </div>
 
               <div
@@ -722,7 +888,9 @@ export default function Admin() {
                 <div className="text-3xl font-black text-white tracking-tight">
                   {analytics.last30Days}
                 </div>
-                <p className="text-[10px] text-slate-500 mt-2 font-medium">Click to filter list</p>
+                <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                  Unique Visitors ({analytics.totalViews30} Views)
+                </p>
               </div>
 
               <div
@@ -733,14 +901,16 @@ export default function Admin() {
                     : "border-slate-800/80 hover:border-slate-700"
                 }`}
               >
-                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 mb-1 flex items-center justify-between">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1 flex items-center justify-between">
                   All-Time Total
                   {timeFilter === "alltime" && <span className="text-[9px] bg-emerald-500/20 px-2 py-0.5 rounded">Active</span>}
                 </p>
                 <div className="text-3xl font-black text-white tracking-tight">
                   {analytics.allTime}
                 </div>
-                <p className="text-[10px] text-slate-500 mt-2 font-medium">Click to filter list</p>
+                <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                  Unique Visitors ({analytics.totalViewsAll} Views)
+                </p>
               </div>
             </div>
 
